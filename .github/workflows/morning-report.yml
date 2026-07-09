@@ -2,7 +2,7 @@ name: Morning Report
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # 7:00 Asia/Bangkok
+    - cron: "20 11 * * *"  # 7:00 Asia/Bangkok
   workflow_dispatch:      # manual trigger
 
 jobs:

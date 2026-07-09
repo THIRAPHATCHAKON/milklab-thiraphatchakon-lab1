@@ -26,27 +26,30 @@ def append_to_sheet(menu: str, qty: int, price: float) -> dict:
     Returns dict {timestamp, menu, qty, price, total} ที่ append แล้ว
     Raises RuntimeError ถ้า credentials ไม่มี หรือ Sheet ไม่ accessible
     """
-
+    cred_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
     sheet_id = os.getenv("GOOGLE_SHEETS_ID")
 
+    if not cred_json:
+        raise RuntimeError("Missing GOOGLE_SHEETS_CREDENTIALS in environment")
     if not sheet_id:
         raise RuntimeError("Missing GOOGLE_SHEETS_ID in environment")
 
     try:
-        # 🎯 เปลี่ยนมาอ่านสิทธิ์จากไฟล์ credentials.json โดยตรง (หมดปัญหา JSON พังใน .env)
-        client = gspread.service_account(filename="credentials.json")
-        
+        # อ่านสิทธิ์จาก JSON string ใน .env โดยตรง (ไม่ต้องมีไฟล์ credentials.json แยก)
+        cred_dict = json.loads(cred_json)
+        client = gspread.service_account_from_dict(cred_dict)
+
         # เปิดหน้า Sheet ด้วย ID
         sheet = client.open_by_key(sheet_id).sheet1
-        
+
         # เตรียมข้อมูลเพื่อบันทึก
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         total = qty * price
         row_data = [timestamp, menu, qty, price, total]
-        
+
         # บันทึกข้อมูลเพิ่มแถวใหม่
         sheet.append_row(row_data)
-        
+
         return {
             "timestamp": timestamp,
             "menu": menu,
@@ -54,9 +57,12 @@ def append_to_sheet(menu: str, qty: int, price: float) -> dict:
             "price": price,
             "total": total
         }
-        
+
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"GOOGLE_SHEETS_CREDENTIALS is not valid JSON: {e}")
     except Exception as e:
         raise RuntimeError(f"Google Sheet error: {e}")
+
 
     raise NotImplementedError("Implement in Session 2 Lab 1.3 (TODO 1)")
 
