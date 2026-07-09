@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 import gspread
 import requests
+import json
 from dotenv import load_dotenv
 # ➕ เพิ่มการอิมพอร์ตสำหรับเรียกใช้ Gemini
 from google import genai
@@ -76,7 +77,20 @@ def main() -> int:
 
     try:
         # 1. ดึงข้อมูลดิบจาก Google Sheet
-        client = gspread.service_account(filename="credentials.json")
+        cred_json = os.getenv("GOOGLE_SHEETS_CREDENTIALS")
+        
+        if cred_json:
+            # 🌐 ถ้ารันบน GitHub Actions หรือระบุใน env (มีนาใช้งานเป็น String JSON)
+            cred_dict = json.loads(cred_json)
+            client = gspread.service_account_from_dict(cred_dict)
+        else:
+            # 💻 ถ้ารันบนเครื่องตัวเอง (Local) และไม่มีค่าใน env ให้ดึงจากไฟล์ตรงๆ
+            if os.path.exists("credentials.json"):
+                client = gspread.service_account(filename="credentials.json")
+            else:
+                print("[ERROR] ไม่พบข้อมูลสิทธิ์กูเกิลชีต (ไม่มีทั้งใน ENV และไฟล์ credentials.json)", file=sys.stderr)
+                return 1
+
         sheet = client.open_by_key(sheet_id).sheet1
         all_rows = sheet.get_all_values()
         
