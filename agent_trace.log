@@ -1,0 +1,17 @@
+2026-07-11 12:57 | user_input | บันทึกขายนมหมี 2 ขวด ราคาละ 65
+2026-07-11 12:57 | tool_error | parse ล้มเหลว: ไม่พบ GEMINI_API_KEY ใน environment (ตรวจสอบไฟล์ .env)
+2026-07-11 12:58 | user_input | บันทึกขายนมหมี 2 ขวด ราคาละ 65
+2026-07-11 12:58 | llm_response | {"tool": "log_sale", "args": {"menu": "นมหมี่", "quantity": 2, "price": 65}, "confidence": 0.95, "reason": "บันทึกการขาย นมหมี่ 2 ขวด ราคาขวดละ 65 บาท"}
+2026-07-11 12:58 | tool_result | {"ok": true, "timestamp": "2026-07-11 12:58:27", "menu": "นมหมี่", "quantity": 2, "price": 65.0, "total": 130.0, "notified_via": "telegram"}
+2026-07-11 13:25 | user_input | ่ขอสรุปยอดขายเมื่อวานหน่อย
+2026-07-11 13:25 | llm_response | {"tool": "get_yesterday_summary", "args": {}, "confidence": 0.95, "reason": "ผู้ใช้ต้องการสรุปยอดขายเมื่อวาน"}
+2026-07-11 13:25 | tool_error | error: morning_report error: module 'morning_report' has no attribute 'get_summary'
+2026-07-11 13:28 | user_input | บันทึกขายนมหมี 2 ขวด ราคาละ 65
+2026-07-11 13:28 | llm_response | {"tool": "log_sale", "args": {"menu": "นมหมี่", "quantity": 2, "price": 65}, "confidence": 1.0, "reason": "บันทึกการขาย นมหมี่ 2 ขวด ราคา 65 บาท"}
+2026-07-11 13:28 | tool_result | {"ok": true, "timestamp": "2026-07-11 13:28:46", "menu": "นมหมี่", "quantity": 2, "price": 65.0, "total": 130.0, "notified_via": "telegram"}
+2026-07-11 13:29 | user_input | ่ขอสรุปยอดขายเมื่อวานหน่อย
+2026-07-11 13:29 | llm_response | {"tool": "get_yesterday_summary", "args": {}, "confidence": 1.0, "reason": "ผู้ใช้ต้องการสรุปยอดขายเมื่อวาน"}
+2026-07-11 13:29 | tool_result | {"ok": true, "tool": "query_sales", "date": "2026-07-10", "summary": "📊 รายงานยอดขายประจำวันที่ 2026-07-10\n❌ ไม่มี ยอดขายในวันนี้"}
+2026-07-11 20:35 | user_input | บันทึกขายนมหมี 2 ขวด ราคาละ 65
+2026-07-11 20:35 | llm_response | {"tool": "log_sale", "args": {"menu": "นมหมี", "quantity": 2, "price": 65}, "confidence": 1.0, "reason": "บันทึกยอดขายนมหมี 2 ขวด ราคาขวดละ 65 บาท"}
+2026-07-11 20:35 | tool_result | {"ok": true, "timestamp": "2026-07-11 20:35:09", "menu": "นมหมี", "quantity": 2, "price": 65.0, "total": 130.0, "notified_via": "telegram"}
