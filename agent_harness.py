@@ -104,11 +104,12 @@ Usage:
 รับคำสั่งภาษาไทย ส่งให้ Gemini พร้อม system prompt + JSON schema
 parse response เป็น action (log_sale / get_yesterday_summary / send_telegram_report / unknown)
 confidence ต่ำกว่า threshold -> ตีเป็น unknown เสมอ
-เรียก tool จริง พร้อม write_trace ทุก stage (user_input / plan / result)
+เรียก tool จริง พร้อม log agent_trace.log ครบ 4 event type
+(user_input / llm_response / tool_result / tool_error)
 
 นักศึกษาต้องเติม TODO ใน 3 จุด ใน Session 2 Lab 2.3
 """
-
+from zoneinfo import ZoneInfo
 import argparse
 import json
 import os
@@ -123,7 +124,13 @@ from google.genai import types
 # ถ้า confidence ต่ำกว่านี้ ถือว่าโมเดลไม่มั่นใจพอ -> บังคับเป็น unknown แทนที่จะเดา
 CONFIDENCE_THRESHOLD = 0.7
 
-TRACE_LOG_PATH = os.path.join(os.path.dirname(__file__), "trace.log")
+TRACE_LOG_PATH = os.path.join(os.path.dirname(__file__), "agent_trace.log")
+
+# 4 event type ขั้นต่ำที่ต้อง log เพื่อ debug agent ได้ครบ:
+#   user_input   -> ผู้ใช้พิมพ์อะไรมา
+#   llm_response -> LLM ตีความออกมาเป็น action/args อะไร
+#   tool_result  -> tool เรียกสำเร็จ คืนอะไรกลับมา
+#   tool_error   -> tool ล้มเหลว/validation ไม่ผ่าน/unknown
 
 SYSTEM_INSTRUCTION = """You are MilkLab Agent Router.
 Convert one Thai user message into ONE JSON action.
@@ -161,15 +168,19 @@ ACTION_TO_TOOL = {
 }
 
 
-def write_trace(record: dict) -> None:
-    """เขียน trace ลง trace.log (1 บรรทัด = 1 JSON) + print ให้เห็นตอน debug"""
-    record = {"ts": datetime.now().isoformat(timespec="seconds"), **record}
+def write_trace(event_type: str, message: str) -> None:
+    """เขียน trace 1 บรรทัด/1 event ลง agent_trace.log แบบ 'timestamp | event_type | message'
+
+    event_type ต้องเป็นหนึ่งใน: user_input, llm_response, tool_result, tool_error
+    """
+    ts = datetime.now(ZoneInfo("Asia/Bangkok")).strftime("%Y-%m-%d %H:%M")
+    line = f"{ts} | {event_type} | {message}"
     try:
         with open(TRACE_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            f.write(line + "\n")
     except OSError:
         pass
-    print(f"[TRACE] stage={record.get('stage')} {json.dumps(record, ensure_ascii=False)}")
+    print(f"[TRACE] {line}")
 
 
 def _extract_json(text: str) -> dict:
@@ -287,21 +298,26 @@ def main() -> int:
 
     print(f"[USER] {args.cmd}")
 
-    # TODO 3: เรียก parse_command then dispatch_tool then print trace ตาม format ใน session-2.md
-    write_trace({"stage": "user_input", "input": args.cmd})
+    # TODO 3: เรียก parse_command then dispatch_tool then log trace ครบ 4 event type
+    write_trace("user_input", args.cmd)
 
     try:
         tool_call = parse_command(args.cmd)
     except RuntimeError as exc:
-        write_trace({"stage": "plan", "error": str(exc)})
+        write_trace("tool_error", f"parse ล้มเหลว: {exc}")
         print(f"[LLM]  parse error: {exc}")
         return 1
 
-    write_trace({"stage": "plan", "plan": tool_call})
+    write_trace("llm_response", json.dumps(tool_call, ensure_ascii=False))
     print(f"[LLM]  tool={tool_call['tool']} args={tool_call['args']}")
 
     result = dispatch_tool(tool_call)
-    write_trace({"stage": "result", "result": result})
+
+    if result.startswith(("error:", "unknown:")):
+        write_trace("tool_error", result)
+    else:
+        write_trace("tool_result", result)
+
     print(f"[TOOL] {tool_call['tool']} {result}")
     print(f"[USER] ← {result}")
 
