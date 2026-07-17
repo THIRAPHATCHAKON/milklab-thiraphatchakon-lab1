@@ -1,3 +1,25 @@
+---
+title: MilkLab RAG Chatbot
+emoji: 🥛
+colorFrom: yellow
+colorTo: pink
+sdk: streamlit
+sdk_version: "1.38.0"
+app_file: app.py
+pinned: false
+---
+
+# MilkLab RAG Chatbot
+
+Chatbot ตอบคำถามเกี่ยวกับร้าน MilkLab (เมนู, ราคา, ส่วนผสม, allergen, เวลาเปิด-ปิด, ที่ตั้ง)
+โดยใช้ RAG (Retrieval-Augmented Generation) จากไฟล์ `menu_kb.md`
+
+## Stack
+- Streamlit — chat UI
+- sentence-transformers (multilingual-MiniLM) — embedding
+- FAISS — vector search
+- Gemini — LLM สำหรับสร้างคำตอบ
+
 # MilkLab° Solopreneur Starter (Course 69-1)
 
 Template repo สำหรับวิชา 31-407-106-406 : AI for Solopreneurs
