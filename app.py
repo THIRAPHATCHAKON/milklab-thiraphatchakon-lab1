@@ -70,7 +70,7 @@ def generate_answer(query: str, context_chunks: list[str]) -> str:
 
     ตอบจากข้อมูลต่อไปนี้เท่านั้น
 
-    ถ้าไม่มีข้อมูลใน Context ให้ตอบว่า "ไม่พบข้อมูล"
+    ถ้าไม่มีข้อมูลใน Context ให้ตอบว่า "ขออภัย ผมไม่ทราบข้อมูลนี้"
 
     Context:
     {context}
