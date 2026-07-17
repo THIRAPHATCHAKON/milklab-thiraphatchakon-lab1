@@ -7,9 +7,11 @@ Deploy: push to GitHub then Actions deploys to HuggingFace Space
 """
 
 import os
-
 import streamlit as st
-
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from google import genai
 
 @st.cache_resource
 def load_index():
@@ -18,12 +20,40 @@ def load_index():
 
     Returns: (model, index, chunks_list)
     """
-    raise NotImplementedError("Implement in Session 3 Lab 2.2 (TODO 1-3)")
+    with open("menu_kb.md", "r", encoding="utf-8") as f:
+        document = f.read()
+
+    # แบ่งเป็น chunks
+    chunks = [c.strip() for c in document.split("\n\n") if c.strip()]
+
+    # โหลด embedding model
+    model = SentenceTransformer(
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+
+    # Encode
+    embeddings = model.encode(
+        chunks,
+        convert_to_numpy=True
+    ).astype(np.float32)
+
+    # สร้าง FAISS Index
+    index = faiss.IndexFlatL2(embeddings.shape[1])
+    index.add(embeddings)
+
+    return model, index, chunks
 
 
 def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 3) -> list[str]:
     """TODO 4: encode query, search index, return top-k chunks"""
-    raise NotImplementedError("Implement in Session 3 Lab 2.2 (TODO 4)")
+    query_embedding = model.encode(
+        [query],
+        convert_to_numpy=True
+    ).astype(np.float32)
+
+    _, indices = index.search(query_embedding, k)
+
+    return [chunks[i] for i in indices[0]]
 
 
 def generate_answer(query: str, context_chunks: list[str]) -> str:
@@ -31,7 +61,30 @@ def generate_answer(query: str, context_chunks: list[str]) -> str:
 
     Hint: build prompt that says "ตอบจากข้อมูลต่อไปนี้เท่านั้น ถ้าไม่มีใน context ให้บอกว่าไม่รู้"
     """
-    raise NotImplementedError("Implement in Session 3 Lab 2.2 (TODO 5)")
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+
+    context = "\n\n".join(context_chunks)
+
+    prompt = f"""
+    คุณคือผู้ช่วยร้าน MilkLab
+
+    ตอบจากข้อมูลต่อไปนี้เท่านั้น
+
+    ถ้าไม่มีข้อมูลใน Context ให้ตอบว่า "ไม่พบข้อมูล"
+
+    Context:
+    {context}
+
+    คำถาม:
+    {query}
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    return response.text
 
 
 def main():

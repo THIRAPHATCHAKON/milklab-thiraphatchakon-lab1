@@ -15,3 +15,17 @@
 2026-07-11 20:35 | user_input | บันทึกขายนมหมี 2 ขวด ราคาละ 65
 2026-07-11 20:35 | llm_response | {"tool": "log_sale", "args": {"menu": "นมหมี", "quantity": 2, "price": 65}, "confidence": 1.0, "reason": "บันทึกยอดขายนมหมี 2 ขวด ราคาขวดละ 65 บาท"}
 2026-07-11 20:35 | tool_result | {"ok": true, "timestamp": "2026-07-11 20:35:09", "menu": "นมหมี", "quantity": 2, "price": 65.0, "total": 130.0, "notified_via": "telegram"}
+2026-07-12 21:32 | user_input | บันทึกขายนมหมี 2 ขวด ราคาละ 65
+2026-07-12 21:32 | llm_response | {"tool": "log_sale", "args": {"menu": "นมหมี", "quantity": 2, "price": 65}, "confidence": 1.0, "reason": "ผู้ใช้ต้องการบันทึกการขาย นมหมี 2 ขวด ราคาขวดละ 65 บาท"}
+2026-07-12 21:32 | tool_result | {"ok": true, "timestamp": "2026-07-12 21:32:57", "menu": "นมหมี", "quantity": 2, "price": 65.0, "total": 130.0, "notified_via": "telegram"}
+2026-07-12 21:33 | user_input | สรุปยอดขายวันนี้หน่อย
+2026-07-12 21:33 | llm_response | {"tool": "unknown", "args": {}, "confidence": 0.8, "reason": "ไม่สามารถสรุปยอดขายของวันนี้ได้ มีแค่ยอดขายเมื่อวาน"}
+2026-07-12 21:33 | tool_error | unknown: ไม่สามารถสรุปยอดขายของวันนี้ได้ มีแค่ยอดขายเมื่อวาน
+2026-07-12 21:36 | user_input | สรุปยอดขายวันนี้หน่อย
+2026-07-12 21:36 | tool_error | parse ล้มเหลว: ไม่พบ GEMINI_API_KEY ใน environment (ตรวจสอบไฟล์ .env)
+2026-07-12 21:37 | user_input | สรุปยอดขายวันนี้หน่อย
+2026-07-12 21:37 | llm_response | {"tool": "get_sales_summary", "args": {"period": "today"}, "confidence": 0.9, "reason": "ผู้ใช้ต้องการสรุปยอดขายของวันนี้"}
+2026-07-12 21:37 | tool_result | {"ok": true, "tool": "query_sales", "date": "2026-07-12", "summary": "📊 รายงานยอดขายประจำวันที่ 2026-07-12\n-------------------------\n- นมหมี: 2 ขวด\n-------------------------\n💰 ยอดรวมทั้งหมด: 130.0 บาท"}
+2026-07-12 21:38 | user_input | บันทึกขายลาเต้น้ำผึ้ง -5 แก้ว
+2026-07-12 21:38 | llm_response | {"tool": "unknown", "args": {}, "confidence": 0.0, "reason": "ไม่พบบันทึกขายที่เป็นจำนวนติดลบ และไม่ระบุราคา"}
+2026-07-12 21:38 | tool_error | unknown: ไม่พบบันทึกขายที่เป็นจำนวนติดลบ และไม่ระบุราคา
