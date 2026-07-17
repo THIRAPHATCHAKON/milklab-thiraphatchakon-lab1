@@ -103,8 +103,10 @@
 # }
 
 # agent_tools.py
+# agent_tools.py
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
 import sales_logger
 import morning_report
 
@@ -130,7 +132,7 @@ def log_sale(menu, quantity, price):
 
 def _validate_query_date(date):
     try:
-        datetime.now(ZoneInfo("Asia/Bangkok")).strftime("%Y-%m-%d %H:%M:%S")
+        datetime.strptime(date, '%Y-%m-%d')
     except (TypeError, ValueError):
         return 'date must be YYYY-MM-DD'
     return None
@@ -196,8 +198,8 @@ TOOL_REGISTRY = {
     },
     'query_sales': {
         'fn': query_sales,
-        'args': (),  # get_yesterday_summary() ไม่รับ argument ตาม SYSTEM_INSTRUCTION
-        'coerce': {},
+        'args': ('date',),  # agent_harness.dispatch_tool แปลง period -> date จริงมาให้แล้ว
+        'coerce': {'date': str},
     },
     'send_alert': {
         'fn': send_alert,
