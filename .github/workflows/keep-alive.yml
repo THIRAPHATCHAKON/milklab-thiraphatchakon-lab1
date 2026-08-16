@@ -1,0 +1,16 @@
+name: Keep HuggingFace Space Alive
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping HuggingFace Space
+        run: |
+          curl -L --max-time 60 -s -o /dev/null -w "%{http_code}\n" \
+          https://huggingface.co/spaces/Thiraphatchakon/milklab-rag
