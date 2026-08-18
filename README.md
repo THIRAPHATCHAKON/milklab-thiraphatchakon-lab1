@@ -1,52 +1,53 @@
 ---
-title: MilkLab RAG Chatbot
-emoji: 🥛
+title: SolarPlus RAG Chatbot
+emoji: ☀️
 colorFrom: yellow
-colorTo: pink
-sdk: streamlit
-sdk_version: "1.38.0"
-app_file: app.py
+colorTo: blue
+sdk: docker
+app_port: 8501
 pinned: false
 ---
 
-# MilkLab RAG Chatbot
+# โซลาร์พลัส — ผู้ช่วยให้คำปรึกษาโซลาร์เซลล์
 
-Chatbot ตอบคำถามเกี่ยวกับร้าน MilkLab (เมนู, ราคา, ส่วนผสม, allergen, เวลาเปิด-ปิด, ที่ตั้ง)
-โดยใช้ RAG (Retrieval-Augmented Generation) จากไฟล์ `menu_kb.md`
+Chatbot ตอบคำถามลูกค้าเรื่องการติดตั้งโซลาร์เซลล์ (ขนาดระบบ, ราคา, การคืนทุน,
+เอกสาร, การรับประกัน) โดยใช้ RAG จากไฟล์ `solar_kb.md`
+ส่วนการคำนวณขนาด/ราคา/คืนทุนทำด้วย `solar_calc.py` ไม่ให้ LLM คิดเลขเอง
 
 ## Stack
-- Streamlit — chat UI
-- sentence-transformers (multilingual-MiniLM) — embedding
+
+- Streamlit — chat UI (รันบน Docker SDK)
+- sentence-transformers (multilingual-MiniLM) — embedding ภาษาไทย
 - FAISS — vector search
-- Gemini — LLM สำหรับสร้างคำตอบ
-
-# MilkLab° Solopreneur Starter (Course 69-1)
-
-Template repo สำหรับวิชา 31-407-106-406 : AI for Solopreneurs
-
-## เริ่มต้น
-
-1. **Use this template** then Create a new repository (ตั้งชื่อ `milklab-<ชื่อ>`)
-2. เปิด **Codespaces** จาก repo ใหม่
-3. ตั้ง user-level Codespaces secret `GOOGLE_API_KEY` (ดู Quickstart)
-4. รัน `python scripts/verify_setup.py` ใน terminal
+- Gemini — LLM สำหรับเรียบเรียงคำตอบ
 
 ## ไฟล์หลัก
 
 | ไฟล์ | Session | คำอธิบาย |
 |---|---|---|
-| `caption_generator.py` | S1 | สร้างแคปชั่นให้โพสต์ MilkLab |
-| `sales_logger.py` | S2 | บันทึกยอดขายลง Google Sheets |
+| `caption_generator.py` | S1 | สร้างแคปชั่นโพสต์โซเชียลของร้าน |
+| `lead_logger.py` | S2 | บันทึกลีดลูกค้าลง Google Sheets |
+| `lead_report.py` | S2 | สรุปลีดรายวันส่ง Telegram |
 | `agent_harness.py` | S2 | รับคำสั่งภาษาไทย เรียก tool |
+| `agent_tools.py` | S2 | tool registry + validation |
+| `solar_calc.py` | — | คำนวณขนาด/ราคา/คืนทุน (Python ล้วน) |
 | `app.py` | S3 | Streamlit RAG chatbot |
 
-## เครื่องมือ
+## รันในเครื่อง
 
-- Python 3.11
-- Gemini API (google-genai)
-- Streamlit (S3)
-- gspread (S2)
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-## ดูคอร์ส
+หรือรันแบบเดียวกับที่ deploy จริง:
 
-[course-691-stsw](https://github.com/<owner>/course-691-stsw) (link จะ update ตอนสร้าง public repo)
+```bash
+docker build -t solarplus-rag .
+docker run -p 8501:8501 -e GOOGLE_API_KEY=xxx solarplus-rag
+```
+
+> ตัวเลขราคาและสเปกใน `solar_kb.md` และ `solar_calc.py` เป็นค่าตั้งต้น
+> ต้องแก้ให้ตรงกับราคาจริงของร้านก่อนใช้งานจริง
+
+รายละเอียดการ pivot จาก MilkLab ดูที่ `README_PIVOT.md`
