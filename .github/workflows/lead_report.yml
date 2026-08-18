@@ -1,9 +1,10 @@
-name: Morning Report
+name: Daily Lead Report
 
 on:
   schedule:
-    - cron: "20 11 * * *"  # 7:00 Asia/Bangkok
-  workflow_dispatch:      # manual trigger
+    # 00:00 UTC = 07:00 Asia/Bangkok
+    - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   send-report:
@@ -11,13 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
+        with:
+          python-version: '3.11'
+          cache: pip
       - run: pip install -r requirements.txt
-      - name: Run morning report
+      - name: Run lead report
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
           GOOGLE_SHEETS_ID:   ${{ secrets.GOOGLE_SHEETS_ID }}
-          GOOGLE_API_KEY:     ${{ secrets.GOOGLE_API_KEY }}
           GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
-        run: python morning_report.py
+        run: python lead_report.py

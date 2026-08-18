@@ -1,0 +1,52 @@
+name: Log Lead (manual)
+
+# ไม่มี schedule โดยตั้งใจ — ลีดเกิดตอนลูกค้าติดต่อเข้ามา ไม่ได้เกิดตามเวลา
+# ของเดิมตั้ง cron ไว้ ทำให้ระบบบันทึกออเดอร์ปลอมด้วยค่า default ทุกวัน
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'ชื่อลูกค้า'
+        required: true
+      contact:
+        description: 'เบอร์โทร / LINE ID'
+        required: true
+      bill:
+        description: 'ค่าไฟเฉลี่ยต่อเดือน (บาท)'
+        required: true
+        default: '3000'
+      note:
+        description: 'หมายเหตุ'
+        required: false
+        default: ''
+
+jobs:
+  log-lead:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Run lead_logger
+        env:
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # รับ input ผ่าน env ไม่ interpolate ลง shell ตรงๆ กัน script injection
+          IN_NAME: ${{ inputs.name }}
+          IN_CONTACT: ${{ inputs.contact }}
+          IN_BILL: ${{ inputs.bill }}
+          IN_NOTE: ${{ inputs.note }}
+        run: |
+          python lead_logger.py \
+            --name "$IN_NAME" \
+            --contact "$IN_CONTACT" \
+            --bill "$IN_BILL" \
+            --note "$IN_NOTE"
