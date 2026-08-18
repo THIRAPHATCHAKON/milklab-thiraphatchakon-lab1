@@ -1,0 +1,7 @@
+.git
+.github
+__pycache__
+*.pyc
+.env
+agent_trace.log
+README_PIVOT.md
