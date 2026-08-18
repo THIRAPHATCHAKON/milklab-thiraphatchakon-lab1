@@ -1,133 +1,75 @@
-# # 
+"""SolarPlus Agent Tools (S2) — เดิมเป็น tools ของ MilkLab
 
-# # agent_tools.py
-# from datetime import datetime, timedelta
+pivot mapping:
+  log_sale     -> log_lead        (บันทึกลีดลูกค้า ไม่ใช่ยอดขายน้ำ)
+  query_sales  -> query_leads     (สรุปลีดรายวัน)
+  send_alert   -> send_alert      (เหมือนเดิม ยังต้อง confirm=True ก่อนส่ง)
+  (ใหม่)       -> estimate_solar  (คำนวณขนาด/ราคา/คืนทุน ด้วย Python ล้วน)
 
-# import sales_logger
-# import morning_report
+ทุก tool คืน dict ที่มี key 'ok' เสมอ เพื่อให้ harness แยก success/error ได้แบบเดียวกัน
+"""
 
-
-# def _validate_sale(menu, qty, price):
-#     if not menu or not str(menu).strip():
-#         return 'menu must not be empty'
-#     if qty <= 0:
-#         return 'qty > 0'
-#     if price < 0:
-#         return 'price >= 0'
-#     if qty > 500:
-#         return 'qty too large'
-#     return None
-
-
-# def log_sale(menu, quantity, price):
-#     err = _validate_sale(menu, quantity, price)
-#     if err:
-#         return {'ok': False, 'tool': 'log_sale', 'error': err}
-#     return sales_logger.append_sale(menu, quantity, price)
-
-
-# def _validate_query_date(date):
-#     try:
-#         datetime.strptime(date, '%Y-%m-%d')
-#     except (TypeError, ValueError):
-#         return 'date must be YYYY-MM-DD'
-#     return None
-
-
-# def query_sales(date=None):
-#     """ดูสรุปยอดขายของวันที่ระบุ ถ้าไม่ระบุ default = เมื่อวาน (ตรงกับ get_yesterday_summary())"""
-#     if date is None:
-#         date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-
-#     err = _validate_query_date(date)
-#     if err:
-#         return {'ok': False, 'tool': 'query_sales', 'error': err}
-
-#     try:
-#         summary = morning_report.get_summary(date)
-#     except Exception as e:
-#         return {'ok': False, 'tool': 'query_sales', 'error': f'morning_report error: {e}'}
-
-#     if isinstance(summary, dict):
-#         summary.setdefault('ok', True)
-#         summary.setdefault('tool', 'query_sales')
-#         summary.setdefault('date', date)
-#         return summary
-#     return {'ok': True, 'tool': 'query_sales', 'date': date, 'summary': summary}
-
-
-# def _validate_alert(message, confirm):
-#     if not message or not str(message).strip():
-#         return 'message must not be empty'
-#     if not confirm:
-#         return 'confirm must be true ก่อนส่งแจ้งเตือนจริง (side effect ต้องยืนยันก่อน)'
-#     return None
-
-
-# def send_alert(message, confirm=False):
-#     """ส่ง message แจ้งเตือนผ่าน Bot (ใช้ morning_report ประกอบ/ส่งรายงาน)
-
-#     ต้อง confirm=True ก่อนถึงจะยอมส่งจริง กันโมเดลยิง notification โดยไม่ตั้งใจ
-#     """
-#     err = _validate_alert(message, confirm)
-#     if err:
-#         return {'ok': False, 'tool': 'send_alert', 'error': err}
-
-#     try:
-#         provider = morning_report.send_report(message)
-#     except AttributeError:
-#         # เผื่อ morning_report ยังไม่มี send_report ให้ fallback ไป sales_logger.send_notification
-#         provider = sales_logger.send_notification(message)
-#     except Exception as e:
-#         return {'ok': False, 'tool': 'send_alert', 'error': f'morning_report error: {e}'}
-
-#     return {'ok': True, 'tool': 'send_alert', 'message': message, 'notified_via': provider}
-
-
-# TOOL_REGISTRY = {
-#     'log_sale': {
-#         'fn': log_sale,
-#         'args': ('menu', 'quantity', 'price'),
-#         'coerce': {'menu': str, 'quantity': int, 'price': float},
-#     },
-#     'query_sales': {
-#         'fn': query_sales,
-#         'args': (),  # get_yesterday_summary() ไม่รับ argument ตาม SYSTEM_INSTRUCTION
-#         'coerce': {},
-#     },
-#     'send_alert': {
-#         'fn': send_alert,
-#         'args': ('message', 'confirm'),
-#         'coerce': {'message': str, 'confirm': bool},
-#     },
-# }
-
-# agent_tools.py
-# agent_tools.py
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import sales_logger
-import morning_report
+import lead_logger
+import lead_report
+import solar_calc
+
+# ค่าไฟที่รับได้ ใช้ validate ก่อนเรียก solar_calc อีกชั้น
+MAX_CONTACT_LEN = 100
+MAX_NAME_LEN = 100
 
 
-def _validate_sale(menu, qty, price):
-    if not menu or not str(menu).strip():
-        return 'menu must not be empty'
-    if qty <= 0:
-        return 'qty > 0'
-    if price < 0:
-        return 'price >= 0'
-    if qty > 500:
-        return 'qty too large'
+def _validate_lead(name, contact, monthly_bill):
+    if not name or not str(name).strip():
+        return 'name must not be empty'
+    if len(str(name)) > MAX_NAME_LEN:
+        return 'name too long'
+    if not contact or not str(contact).strip():
+        return 'contact must not be empty (ต้องมีเบอร์โทรหรือ LINE ID ไว้ติดต่อกลับ)'
+    if len(str(contact)) > MAX_CONTACT_LEN:
+        return 'contact too long'
+    if monthly_bill <= 0:
+        return 'monthly_bill > 0'
+    if monthly_bill > solar_calc.MAX_BILL:
+        return f'monthly_bill too large (> {solar_calc.MAX_BILL:,})'
     return None
 
 
-def log_sale(menu, quantity, price):
-    err = _validate_sale(menu, quantity, price)
+def log_lead(name, contact, monthly_bill):
+    """บันทึกลีดลูกค้าลง Sheet + แจ้งเตือนเจ้าของร้านทาง Telegram"""
+    err = _validate_lead(name, contact, monthly_bill)
     if err:
-        return {'ok': False, 'tool': 'log_sale', 'error': err}
-    return sales_logger.append_sale(menu, quantity, price)
+        return {'ok': False, 'tool': 'log_lead', 'error': err}
+
+    try:
+        return lead_logger.append_lead(name, contact, monthly_bill)
+    except RuntimeError as e:
+        return {'ok': False, 'tool': 'log_lead', 'error': str(e)}
+    except Exception as e:
+        return {'ok': False, 'tool': 'log_lead', 'error': f'unexpected error: {e}'}
+
+
+def estimate_solar(monthly_bill):
+    """ประเมินขนาดระบบ/ราคา/คืนทุน — read-only ไม่มี side effect
+
+    tool นี้คือหัวใจของ pivot: LLM แค่ดึงตัวเลขค่าไฟจากประโยคไทย
+    ส่วนการคำนวณทั้งหมดเป็น Python เพื่อให้ผลลัพธ์เหมือนเดิมทุกครั้ง ตรวจสอบย้อนหลังได้
+    """
+    try:
+        result = solar_calc.estimate(monthly_bill)
+    except solar_calc.EstimateError as e:
+        return {'ok': False, 'tool': 'estimate_solar', 'error': str(e)}
+    except Exception as e:
+        return {'ok': False, 'tool': 'estimate_solar', 'error': f'unexpected error: {e}'}
+
+    return {
+        'ok': True,
+        'tool': 'estimate_solar',
+        'summary': solar_calc.format_th(result),
+        **result,
+    }
 
 
 def _validate_query_date(date):
@@ -138,28 +80,28 @@ def _validate_query_date(date):
     return None
 
 
-def query_sales(date=None):
-    """ดูสรุปยอดขายของวันที่ระบุ ถ้าไม่ระบุ default = เมื่อวาน (ตรงกับ get_yesterday_summary())
+def query_leads(date=None):
+    """สรุปลีดของวันที่ระบุ ถ้าไม่ระบุ default = เมื่อวาน
 
-    ดึง rows ดิบจาก Sheet ผ่าน sales_logger.get_all_rows() ก่อน
-    แล้วส่งให้ morning_report.summarize_for_date(rows, date) สรุปข้อความ
+    ดึง rows ดิบจาก Sheet ผ่าน lead_logger.get_all_rows()
+    แล้วส่งให้ lead_report.summarize_for_date(rows, date) สรุปข้อความ
     """
     if date is None:
         date = (datetime.now(ZoneInfo("Asia/Bangkok")) - timedelta(days=1)).strftime('%Y-%m-%d')
 
     err = _validate_query_date(date)
     if err:
-        return {'ok': False, 'tool': 'query_sales', 'error': err}
+        return {'ok': False, 'tool': 'query_leads', 'error': err}
 
     try:
-        rows = sales_logger.get_all_rows()
-        summary_text = morning_report.summarize_for_date(rows, date)
+        rows = lead_logger.get_all_rows()
+        summary_text = lead_report.summarize_for_date(rows, date)
     except RuntimeError as e:
-        return {'ok': False, 'tool': 'query_sales', 'error': str(e)}
+        return {'ok': False, 'tool': 'query_leads', 'error': str(e)}
     except Exception as e:
-        return {'ok': False, 'tool': 'query_sales', 'error': f'unexpected error: {e}'}
+        return {'ok': False, 'tool': 'query_leads', 'error': f'unexpected error: {e}'}
 
-    return {'ok': True, 'tool': 'query_sales', 'date': date, 'summary': summary_text}
+    return {'ok': True, 'tool': 'query_leads', 'date': date, 'summary': summary_text}
 
 
 def _validate_alert(message, confirm):
@@ -171,7 +113,7 @@ def _validate_alert(message, confirm):
 
 
 def send_alert(message, confirm=False):
-    """ส่ง message แจ้งเตือนผ่าน Telegram (morning_report.send_telegram_notification)
+    """ส่ง message แจ้งเตือนเจ้าของร้านผ่าน Telegram
 
     ต้อง confirm=True ก่อนถึงจะยอมส่งจริง กันโมเดลยิง notification โดยไม่ตั้งใจ
     send_telegram_notification ไม่ return อะไร (None) — ถ้าไม่ raise แปลว่าส่งสำเร็จ
@@ -181,7 +123,7 @@ def send_alert(message, confirm=False):
         return {'ok': False, 'tool': 'send_alert', 'error': err}
 
     try:
-        morning_report.send_telegram_notification(message)
+        lead_report.send_telegram_notification(message)
     except RuntimeError as e:
         return {'ok': False, 'tool': 'send_alert', 'error': str(e)}
     except Exception as e:
@@ -191,13 +133,18 @@ def send_alert(message, confirm=False):
 
 
 TOOL_REGISTRY = {
-    'log_sale': {
-        'fn': log_sale,
-        'args': ('menu', 'quantity', 'price'),
-        'coerce': {'menu': str, 'quantity': int, 'price': float},
+    'log_lead': {
+        'fn': log_lead,
+        'args': ('name', 'contact', 'monthly_bill'),
+        'coerce': {'name': str, 'contact': str, 'monthly_bill': float},
     },
-    'query_sales': {
-        'fn': query_sales,
+    'estimate_solar': {
+        'fn': estimate_solar,
+        'args': ('monthly_bill',),
+        'coerce': {'monthly_bill': float},
+    },
+    'query_leads': {
+        'fn': query_leads,
         'args': ('date',),  # agent_harness.dispatch_tool แปลง period -> date จริงมาให้แล้ว
         'coerce': {'date': str},
     },

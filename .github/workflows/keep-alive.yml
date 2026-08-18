@@ -11,6 +11,7 @@ jobs:
 
     steps:
       - name: Ping HuggingFace Space
+        env:
+          HF_SPACE_URL: ${{ vars.HF_SPACE_URL || 'https://huggingface.co/spaces/Thiraphatchakon/solarplus-rag' }}
         run: |
-          curl -L --max-time 60 -s -o /dev/null -w "%{http_code}\n" \
-          https://huggingface.co/spaces/Thiraphatchakon/milklab-rag
+          curl -L --max-time 60 -s -o /dev/null -w "%{http_code}\n" "$HF_SPACE_URL"
